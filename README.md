@@ -36,3 +36,22 @@ Context就是定义上下文，和Route拆分开来，对ResponseWriter和Reques
 
 跟gin框架比，这里的实现是比较糙的，gin的源代码对前缀树还有功能和算法上的优化等等，但是通过这个实践也是可以很好的了解到前缀树的思想，然后去读源码的时候才能更理解框架的实现思路
 
+## Day2 -1
+给路由建立分组，创建一个RouterGroup类，里面有路径前缀，中间件回调（后续实现）。
+
+这里有个很有意思的事情就是，评论区针对RouterGroup 是否应该嵌套 Engine有激烈的讨论，我这边认为是需要的，翻看gin的源码也是有引用的
+```go
+// RouterGroup is used internally to configure router, a RouterGroup is associated with
+// a prefix and an array of handlers (middleware).
+type RouterGroup struct {
+	Handlers HandlersChain
+	basePath string
+	engine   *Engine
+	root     bool
+}
+```
+这里表达一下自己粗浅的看法，如果有其他想法也欢迎一起讨论。
+
+我认为，组这个概念是一个语法糖，可以方便我们对具有相同前缀的api做一些特性处理，比如挂载统一的鉴权中间件或者日志中间件。如果没有这个组的概念，Engine一样也是可以实现的，在`*router`上继续扩middlewares就行了。因为添加路由最底层的实现方法还是`*router.addRoute`。
+
+现在是为了使类抽象的更加好，所以抽出了一层`RouterGroup`，实际调用的底层还是`*router.addRoute`，作为底层实现是典型的面向接口编程思想。这样即使底层的路由实现发生改变，RouterGroup的接口也可以保持稳定，对外提供统一接口。

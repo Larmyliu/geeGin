@@ -6,6 +6,12 @@ import (
 	"strings"
 )
 
+type RouterGroup struct {
+	prefix      string
+	middlewares []*HandlerFunc
+	engine      *Engine
+}
+
 type router struct {
 	roots    map[string]*Node
 	handlers map[string]HandlerFunc
@@ -32,6 +38,31 @@ func parsePattern(pattern string) []string {
 
 	}
 	return parts
+}
+
+func (r *RouterGroup) Group(prefix string) *RouterGroup {
+	engine := r.engine
+	newGroup := &RouterGroup{
+		prefix: prefix,
+		engine: engine,
+	}
+	engine.Groups = append(engine.Groups, newGroup)
+	return newGroup
+}
+
+func (r *RouterGroup) addRoute(method, path string, handle HandlerFunc) {
+	pattern := r.prefix + path
+	r.engine.Router.addRoute(method, pattern, handle)
+}
+
+// GET defines the method to add GET request
+func (group *RouterGroup) GET(pattern string, handler HandlerFunc) {
+	group.addRoute("GET", pattern, handler)
+}
+
+// POST defines the method to add POST request
+func (group *RouterGroup) POST(pattern string, handler HandlerFunc) {
+	group.addRoute("POST", pattern, handler)
 }
 
 func (r *router) addRoute(method, path string, handler HandlerFunc) {

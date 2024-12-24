@@ -6,12 +6,16 @@ import (
 
 type HandlerFunc func(*Context)
 type Engine struct {
-	Router *router //这里Router是用MAP来实现的，实际上GIN是用树实现的，保存树用的是切片  type methodTrees []methodTree
+	*RouterGroup
+	Router *router
+	Groups []*RouterGroup
 }
 
 // New is the constructor of gee.Engine
 func New() *Engine {
-	return &Engine{Router: newRouter()}
+	engine := &Engine{Router: newRouter()}
+	engine.RouterGroup = &RouterGroup{engine: engine}
+	return engine
 }
 
 // ServeHTTP dispatches the request to the handler whose pattern most closely matches the request URL.
