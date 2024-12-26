@@ -55,3 +55,20 @@ type RouterGroup struct {
 我认为，组这个概念是一个语法糖，可以方便我们对具有相同前缀的api做一些特性处理，比如挂载统一的鉴权中间件或者日志中间件。如果没有这个组的概念，Engine一样也是可以实现的，在`*router`上继续扩middlewares就行了。因为添加路由最底层的实现方法还是`*router.addRoute`。
 
 现在是为了使类抽象的更加好，所以抽出了一层`RouterGroup`，实际调用的底层还是`*router.addRoute`，作为底层实现是典型的面向接口编程思想。这样即使底层的路由实现发生改变，RouterGroup的接口也可以保持稳定，对外提供统一接口。
+
+## Day3
+实现中间件，实现思路很简单, Context 里补充middleware相关的参数
+```
+type Context struct {
+	Writer         http.ResponseWriter
+	Request        *http.Request
+	HttpStatusCode int
+	Path           string
+	Method         string
+	Params         map[string]string
+	// middleware
+	handlers []HandlerFunc
+	index    int
+}
+```
+中间件是通过`c.Next()`来操作执行下一个中间件，使用改造一下handles方法，将group中的回调和实际业务回调放到同一个Context切片中`c.handlers = append(c.handlers, r.handlers[key])`,因为index初始值的时候设置的是-1，所以Next()先执行index++,然后按顺序执行切片中的每个回调
