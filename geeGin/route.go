@@ -8,7 +8,7 @@ import (
 
 type RouterGroup struct {
 	prefix      string
-	middlewares []*HandlerFunc
+	middlewares []HandlerFunc
 	engine      *Engine
 }
 
@@ -38,6 +38,10 @@ func parsePattern(pattern string) []string {
 
 	}
 	return parts
+}
+
+func (r *RouterGroup) Use(middlewares ...HandlerFunc) {
+	r.middlewares = append(r.middlewares, middlewares...)
 }
 
 func (r *RouterGroup) Group(prefix string) *RouterGroup {
@@ -81,10 +85,13 @@ func (r *router) handle(c *Context) {
 	if n != nil {
 		c.Params = params
 		key := c.Method + "-" + n.Pattern
-		r.handlers[key](c)
+		c.handlers = append(c.handlers, r.handlers[key])
 	} else {
-		c.String(http.StatusNotFound, "404 NOT FOUND: %s\n", c.Path)
+		c.handlers = append(c.handlers, func(c *Context) {
+			c.String(http.StatusNotFound, "404 NOT FOUND: %s\n", c.Path)
+		})
 	}
+	c.Next()
 }
 
 func (r *router) getRoute(method, path string) (*Node, map[string]string) {

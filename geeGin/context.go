@@ -15,6 +15,9 @@ type Context struct {
 	Path           string
 	Method         string
 	Params         map[string]string
+	// middleware
+	handlers []HandlerFunc
+	index    int
 }
 
 // NewContext初始化context
@@ -24,7 +27,20 @@ func NewContext(w http.ResponseWriter, r *http.Request) *Context {
 		Request: r,
 		Path:    r.URL.Path,
 		Method:  r.Method,
+		index:   -1,
 	}
+}
+
+func (c *Context) Next() {
+	c.index++
+	s := len(c.handlers)
+	for ; c.index < s; c.index++ {
+		c.handlers[c.index](c)
+	}
+}
+
+func (c *Context) Fail(code int, err string) {
+	c.String(code, err)
 }
 
 func (c *Context) PostForm(key string) string {

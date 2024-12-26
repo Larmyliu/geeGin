@@ -2,6 +2,7 @@ package geegin
 
 import (
 	"net/http"
+	"strings"
 )
 
 type HandlerFunc func(*Context)
@@ -14,13 +15,26 @@ type Engine struct {
 // New is the constructor of gee.Engine
 func New() *Engine {
 	engine := &Engine{Router: newRouter()}
-	engine.RouterGroup = &RouterGroup{engine: engine}
+	engine.RouterGroup = &RouterGroup{
+		engine:      engine,
+		middlewares: make([]HandlerFunc, 0),
+		prefix:      "/",
+	}
+	engine.Groups = []*RouterGroup{engine.RouterGroup}
 	return engine
 }
 
 // ServeHTTP dispatches the request to the handler whose pattern most closely matches the request URL.
 func (engine *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+
+	var middlewares []HandlerFunc
+	for _, group := range engine.Groups {
+		if strings.HasPrefix(req.URL.Path, group.prefix) {
+			middlewares = append(middlewares, group.middlewares...)
+		}
+	}
 	c := NewContext(w, req)
+	c.handlers = middlewares
 	engine.Router.handle(c)
 }
 
