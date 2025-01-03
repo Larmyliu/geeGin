@@ -1,6 +1,7 @@
 package geegin
 
 import (
+	"html/template"
 	"net/http"
 	"strings"
 )
@@ -8,8 +9,10 @@ import (
 type HandlerFunc func(*Context)
 type Engine struct {
 	*RouterGroup
-	Router *router
-	Groups []*RouterGroup
+	Router        *router
+	Groups        []*RouterGroup
+	htmlTemplates *template.Template // for html render
+	funcMap       template.FuncMap
 }
 
 // New is the constructor of gee.Engine
@@ -35,6 +38,7 @@ func (engine *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 	c := NewContext(w, req)
 	c.handlers = middlewares
+	c.engine = engine
 	engine.Router.handle(c)
 }
 
@@ -51,4 +55,12 @@ func (engine *Engine) POST(pattern string, handler HandlerFunc) {
 
 func (engine *Engine) Run(addr string) (err error) {
 	return http.ListenAndServe(addr, engine)
+}
+
+func (engine *Engine) SetFuncMap(funcMap template.FuncMap) {
+	engine.funcMap = funcMap
+}
+
+func (engine *Engine) LoadHTMLGlob(pattern string) {
+	engine.htmlTemplates = template.Must(template.New("").Funcs(engine.funcMap).ParseGlob(pattern))
 }

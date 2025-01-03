@@ -3,6 +3,7 @@ package geegin
 import (
 	"fmt"
 	"net/http"
+	"path"
 	"strings"
 )
 
@@ -52,6 +53,25 @@ func (r *RouterGroup) Group(prefix string) *RouterGroup {
 	}
 	engine.Groups = append(engine.Groups, newGroup)
 	return newGroup
+}
+
+func (r *RouterGroup) createStaticHandler(relativePath string, fs http.FileSystem) HandlerFunc {
+	absolutePath := path.Join(r.prefix, relativePath)
+	fileServer := http.StripPrefix(absolutePath, http.FileServer(fs))
+	return func(ctx *Context) {
+		file := ctx.Param("filepath")
+		if _, err := fs.Open(file); err != nil {
+			ctx.SetStatus(http.StatusNotFound)
+			return
+		}
+		fileServer.ServeHTTP(ctx.Writer, ctx.Request)
+	}
+}
+
+func (r *RouterGroup) Static(relativePath string, root string) {
+	handler := r.createStaticHandler(relativePath, http.Dir(root))
+	urlPattern := path.Join(relativePath, "/*filepath")
+	r.GET(urlPattern, handler)
 }
 
 func (r *RouterGroup) addRoute(method, path string, handle HandlerFunc) {
